@@ -9,7 +9,7 @@ import {
   deleteDoc,
   collection,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { db, storage } from "./firebase";
 import type { Profile, Project, Experience, Education, Reference } from "./content";
 
@@ -54,9 +54,36 @@ export async function deleteItem(col: string, id: string) {
 }
 
 // Upload a file to Storage and return its public download URL.
-export async function uploadFile(path: string, file: File): Promise<string> {
+// Uses a resumable upload so large files (big PDFs) are reliable and can
+// report progress. `onProgress` receives a whole-number percentage (0–100).
+export async function uploadFile(
+  path: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<string> {
   if (!storage) throw new Error("Firebase Storage is not configured.");
   const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, file);
-  return getDownloadURL(storageRef);
+  const task = uploadBytesResumable(storageRef, file);
+
+  return new Promise<string>((resolve, reject) => {
+    task.on(
+      "state_changed",
+      (snapshot) => {
+        if (onProgress) {
+          const pct = Math.round(
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100,
+          );
+          onProgress(pct);
+        }
+      },
+      (error) => reject(error),
+      async () => {
+        try {
+          resolve(await getDownloadURL(task.snapshot.ref));
+        } catch (err) {
+          reject(err);
+        }
+      },
+    );
+  });
 }
