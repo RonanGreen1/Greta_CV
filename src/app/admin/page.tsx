@@ -171,7 +171,6 @@ function ProfileEditor({ profile }: { profile: Profile }) {
   const [form, setForm] = useState(profile);
   const [status, setStatus] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => setForm(profile), [profile]);
 
@@ -180,12 +179,10 @@ function ProfileEditor({ profile }: { profile: Profile }) {
 
   async function onPhoto(file: File) {
     setUploading(true);
-    setProgress(0);
     try {
       const url = await uploadFile(
         `profile/photo-${Date.now()}-${file.name}`,
         file,
-        setProgress,
       );
       set("photoUrl", url);
       await saveProfile({ photoUrl: url });
@@ -199,9 +196,8 @@ function ProfileEditor({ profile }: { profile: Profile }) {
 
   async function onCv(file: File) {
     setUploading(true);
-    setProgress(0);
     try {
-      const url = await uploadFile(`cv/${file.name}`, file, setProgress);
+      const url = await uploadFile(`cv/${file.name}`, file);
       set("cvUrl", url);
       await saveProfile({ cvUrl: url });
       setStatus("CV updated ✓");
@@ -251,7 +247,7 @@ function ProfileEditor({ profile }: { profile: Profile }) {
           </div>
         )}
         <label className={btnSecondary + " cursor-pointer"}>
-          {uploading ? `Uploading… ${progress}%` : "Upload profile photo"}
+          {uploading ? "Uploading…" : "Upload profile photo"}
           <input
             type="file"
             accept="image/*"
@@ -261,7 +257,7 @@ function ProfileEditor({ profile }: { profile: Profile }) {
         </label>
       </div>
 
-      {uploading && <ProgressBar percent={progress} />}
+      {uploading && <ProgressBar />}
 
       <Field label="Name">
         <input className={inputClass} value={form.name} onChange={(e) => set("name", e.target.value)} />
@@ -307,7 +303,7 @@ function ProfileEditor({ profile }: { profile: Profile }) {
 
       <div className="flex items-center gap-4">
         <label className={btnSecondary + " cursor-pointer"}>
-          {uploading ? `Uploading… ${progress}%` : "Replace CV PDF"}
+          {uploading ? "Uploading…" : "Replace CV PDF"}
           <input
             type="file"
             accept="application/pdf"
@@ -392,18 +388,12 @@ function ProjectForm({
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState("");
   const [uploading, setUploading] = useState<null | "imageUrl" | "pdfUrl">(null);
-  const [progress, setProgress] = useState(0);
   const set = (k: keyof Project, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   async function onUpload(kind: "imageUrl" | "pdfUrl", file: File) {
     setUploading(kind);
-    setProgress(0);
     try {
-      const url = await uploadFile(
-        `projects/${Date.now()}-${file.name}`,
-        file,
-        setProgress,
-      );
+      const url = await uploadFile(`projects/${Date.now()}-${file.name}`, file);
       set(kind, url);
       setStatus("Uploaded ✓ (remember to Save)");
     } catch {
@@ -458,7 +448,7 @@ function ProjectForm({
       <div className="flex flex-wrap gap-3">
         <label className={btnSecondary + " cursor-pointer"}>
           {uploading === "imageUrl"
-            ? `Uploading… ${progress}%`
+            ? "Uploading…"
             : form.imageUrl
               ? "Replace image"
               : "Upload cover image"}
@@ -466,15 +456,15 @@ function ProjectForm({
         </label>
         <label className={btnSecondary + " cursor-pointer"}>
           {uploading === "pdfUrl"
-            ? `Uploading… ${progress}%`
+            ? "Uploading…"
             : form.pdfUrl
-              ? "Replace PDF"
-              : "Upload project PDF"}
-          <input type="file" accept="application/pdf" className="hidden" onChange={(e) => e.target.files?.[0] && onUpload("pdfUrl", e.target.files[0])} />
+              ? "Replace file"
+              : "Upload project file (PDF or ZIP)"}
+          <input type="file" accept="application/pdf,.zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && onUpload("pdfUrl", e.target.files[0])} />
         </label>
       </div>
-      {uploading && <ProgressBar percent={progress} />}
-      {form.pdfUrl && <p className="truncate text-xs text-muted">PDF: {form.pdfUrl}</p>}
+      {uploading && <ProgressBar />}
+      {form.pdfUrl && <p className="truncate text-xs text-muted">File: {form.pdfUrl}</p>}
 
       <div className="flex items-center gap-3 pt-2">
         <button className={btnPrimary} onClick={save}>Save project</button>
@@ -694,13 +684,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ProgressBar({ percent }: { percent: number }) {
+function ProgressBar() {
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-border">
-      <div
-        className="h-full rounded-full bg-accent transition-all duration-200"
-        style={{ width: `${percent}%` }}
-      />
+      <div className="h-full w-1/3 animate-progress rounded-full bg-accent" />
     </div>
   );
 }

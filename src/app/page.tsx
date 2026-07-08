@@ -391,9 +391,10 @@ function ProjectModal({
               href={project.pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
+              download
               className="mt-6 inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
             >
-              View project PDF
+              {project.pdfUrl.includes(".zip") ? "Download project files" : "Download project PDF"}
             </a>
           )}
         </div>
